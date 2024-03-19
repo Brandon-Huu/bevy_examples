@@ -1,10 +1,11 @@
+#![allow(unused)]
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 fn main() {
     App::new()
-        .insert_resource(Time::default())
-        .add_plugins(DefaultPlugins)
+        .insert_resource::<Time>(Time::default())
+        .add_plugins((DefaultPlugins, SplashScreenPlugin, MainMenuPlugin))
         .init_state::<GameState>()
         .add_loading_state(
             LoadingState::new(GameState::SplashScreen)
@@ -12,34 +13,42 @@ fn main() {
                 .on_failure_continue_to_state(GameState::ErrorScreen)
                 .load_collection::<MainMenuAssets>()
         )
-        .add_systems(OnEnter(GameState::SplashScreen), setup_splash_screen)
-        .add_systems(OnExit(GameState::SplashScreen), despawn_splash_screen )
-        .add_system(OnEnter(GameState::MainMenu), setup_main_menu)
-        .add_systems(Update, timeout.run_if(in_state(GameState::SplashScreen)))
         .run();
-}
-
-fn setup_main_menu(
-    mut commands: Commands,
-) {
-}
-
-fn timeout(time: Res<Time>){
-    info!("{:?}", time.elapsed_seconds_f64());
-    if time.elapsed_seconds_f64() < 10 { return; }
-    panic!("");
 }
 
 #[derive(Component)]
 struct SplashScreenElement {}
 
-fn despawn_splash_screen(
-    mut commands: Commands,
-    query: Query<(Entity, &SplashScreenElement)>
-){
-    for element in &mut query {
-        commands.entity(element).despawn_recursive());
+#[derive(AssetCollection, Resource)]
+struct MainMenuAssets {
+    #[asset(path="logos/robot.png")]
+    robot: Handle<Image>
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, States, Default, Debug)]
+enum GameState {
+    #[default]
+    SplashScreen,
+    ErrorScreen,
+    MainMenu
+}
+
+pub struct SplashScreenPlugin;
+
+impl Plugin for SplashScreenPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(OnEnter(GameState::SplashScreen), setup_splash_screen)
+            .add_systems(OnExit(GameState::SplashScreen), despawn_splash_screen)
+            .add_systems(Update, timeout.run_if(in_state(GameState::SplashScreen)));
+
     }
+}
+
+fn timeout(time: Res<Time>){
+    info!("{:?}", time.elapsed_seconds_f64());
+    if time.elapsed_seconds_f64() < 10.0 { return; }
+    panic!("");
 }
 
 fn setup_splash_screen(
@@ -73,16 +82,25 @@ fn setup_splash_screen(
     SplashScreenElement {}));
 }
 
-#[derive(AssetCollection, Resource)]
-struct MainMenuAssets {
-    #[asset(path="logos/robot.png")]
-    robot: Handle<Image>
+fn despawn_splash_screen(
+    mut commands: Commands,
+    mut query: Query<(Entity, &SplashScreenElement)>
+){
+    for (entity, _element) in &mut query {
+        commands.entity(entity).despawn_recursive();
+    }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, States, Default, Debug)]
-enum GameState {
-    #[default]
-    SplashScreen,
-    ErrorScreen,
-    MainMenu
+pub struct MainMenuPlugin;
+
+impl Plugin for MainMenuPlugin { 
+    fn build(&self, app: &mut App) {
+        app
+             .add_systems(OnEnter(GameState::MainMenu), setup_main_menu);
+    }
+}
+
+fn setup_main_menu(
+    mut commands: Commands,
+) {
 }

@@ -9,8 +9,7 @@ fn main() {
         .init_state::<GameState>()
         .add_loading_state(
             LoadingState::new(GameState::SplashScreen)
-                //.continue_to_state(GameState::MainMenu)
-                //.on_failure_continue_to_state(GameState::ErrorScreen)
+                .on_failure_continue_to_state(GameState::ErrorScreen)
                 .load_collection::<MainMenuAssets>(),
         )
         .run();
@@ -40,13 +39,18 @@ impl Plugin for SplashScreenPlugin {
         app.add_systems(OnEnter(GameState::SplashScreen), setup_splash_screen)
             .add_systems(OnExit(GameState::SplashScreen), despawn_splash_screen)
             .add_systems(Update, timeout.run_if(in_state(GameState::SplashScreen)))
-            .add_systems(FixedUpdate, splash_screen_fadein_system.run_if(in_state(GameState::SplashScreen)))
-            .add_systems(FixedUpdate, splash_screen_fadeout_system.run_if(in_state(GameState::SplashScreen)));
+            //Runs if MainMenuAssets is inserted into app
+            //Checks if loading is complete
+            .add_systems(FixedUpdate, transition_to_main_menu.run_if(resource_exists::<MainMenuAssets>));
     }
 }
 
+fn transition_to_main_menu(mut next_state: ResMut<NextState<GameState>>){
+    next_state.set(GameState::MainMenu);
+}
+
 fn timeout(time: Res<Time>) {
-    info!("{:?}", time.elapsed_seconds_f64());
+    //info!("{:?}", time.elapsed_seconds_f64());
     if time.elapsed_seconds_f64() < 10.0 {
         return;
     }
@@ -77,10 +81,6 @@ fn setup_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("logos/robot.png"),
-            sprite: Sprite {
-                color: Color::rgba(1.0, 1.0, 1.0, 0.0),
-                ..default()
-            },
             transform: Transform::default().with_scale(Vec3 {
                 x: 0.25,
                 y: 0.25,
@@ -89,42 +89,7 @@ fn setup_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
         SplashScreenElement {},
-        FadeIn {},
     ));
-
-}
-
-#[derive(Component)]
-struct FadeIn {}
-
-#[derive(Component)]
-struct FadeOut {}
-
-fn splash_screen_fadein_system(mut commands: Commands, mut query: Query<(Entity, &mut Sprite), With<FadeIn>>) {
-    for (entity, mut sprite) in query.iter_mut() {
-
-        let alpha = sprite.color.a();
-        sprite.color.set_a(alpha + 0.01);
-
-        if alpha < 1.0 { continue; }
-
-        commands.entity(entity)
-            .remove::<FadeIn>()
-            .insert(FadeOut {});
-    }
-}
-
-fn splash_screen_fadeout_system(mut commands: Commands, mut query: Query<(Entity, &mut Sprite), With<FadeOut>>) {
-    for (entity, mut sprite) in query.iter_mut() {
-
-        let alpha = sprite.color.a();
-        sprite.color.set_a(alpha - 0.01);
-
-        if alpha > 0.0 { continue; }
-
-        commands.entity(entity)
-            .remove::<FadeOut>();
-    }
 }
 
 fn despawn_splash_screen(mut commands: Commands, mut query: Query<(Entity, &SplashScreenElement)>) {

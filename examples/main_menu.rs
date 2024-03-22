@@ -1,106 +1,65 @@
 #![allow(unused)]
 use bevy::prelude::*;
-use bevy_asset_loader::prelude::*;
 
 fn main() {
     App::new()
         .insert_resource::<Time>(Time::default())
-        .add_plugins((DefaultPlugins, SplashScreenPlugin, MainMenuPlugin))
+        .add_plugins((DefaultPlugins, /* SplashScreenPlugin, */ MainMenuPlugin))
         .init_state::<GameState>()
-        .add_loading_state(
-            LoadingState::new(GameState::SplashScreen)
-                .continue_to_state(GameState::MainMenu)
-                .on_failure_continue_to_state(GameState::ErrorScreen)
-                .load_collection::<MainMenuAssets>()
-        )
         .run();
-}
-
-#[derive(Component)]
-struct SplashScreenElement {}
-
-#[derive(AssetCollection, Resource)]
-struct MainMenuAssets {
-    #[asset(path="logos/robot.png")]
-    robot: Handle<Image>
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, States, Default, Debug)]
 enum GameState {
     #[default]
-    SplashScreen,
-    ErrorScreen,
-    MainMenu
-}
-
-pub struct SplashScreenPlugin;
-
-impl Plugin for SplashScreenPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(GameState::SplashScreen), setup_splash_screen)
-            .add_systems(OnExit(GameState::SplashScreen), despawn_splash_screen)
-            .add_systems(Update, timeout.run_if(in_state(GameState::SplashScreen)));
-
-    }
-}
-
-fn timeout(time: Res<Time>){
-    info!("{:?}", time.elapsed_seconds_f64());
-    if time.elapsed_seconds_f64() < 10.0 { return; }
-    panic!("");
-}
-
-fn setup_splash_screen(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>
-){
-    commands.spawn(Camera2dBundle::default());
-
-    commands.spawn((TextBundle::from_section(
-                "My Game Name",
-                TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 100.0,
-                    color: Color::WHITE,
-                },
-            )
-            .with_style(Style { 
-                position_type: PositionType::Absolute,
-                bottom: Val::Px(5.0),
-                right: Val::Px(15.0),
-                ..default()
-            }),
-            SplashScreenElement {} ));
-
-    commands.spawn((SpriteBundle {
-        texture: asset_server.load("logos/robot.png"),
-        transform: Transform::default()
-            .with_scale(Vec3 { x: 0.25, y:0.25, z:0.25 }),
-        ..default()
-    },
-    SplashScreenElement {}));
-}
-
-fn despawn_splash_screen(
-    mut commands: Commands,
-    mut query: Query<(Entity, &SplashScreenElement)>
-){
-    for (entity, _element) in &mut query {
-        commands.entity(entity).despawn_recursive();
-    }
+    //SplashScreen,
+    //ErrorScreen,
+    MainMenu,
 }
 
 pub struct MainMenuPlugin;
 
-impl Plugin for MainMenuPlugin { 
+#[derive(Component)]
+struct MainMenuElement {}
+
+impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
-        app
-             .add_systems(OnEnter(GameState::MainMenu), setup_main_menu);
+        app.add_systems(OnEnter(GameState::MainMenu), setup_main_menu);
     }
 }
 
-fn setup_main_menu(
-    mut commands: Commands,
-) {
+fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer> ) {
+    commands.spawn(Camera2dBundle::default());
+    commands
+        .spawn((
+            MainMenuElement {},
+            ButtonBundle {
+                style: Style {
+                    height: Val::Px(108.0),
+                    width: Val::Px(192.0),
+                    border: UiRect::all(Val::Px(5.0)),
+                    // horizontally center child text
+                    justify_content: JustifyContent::Center,
+                    // vertically center child text
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                background_color: Color::rgb(0.15, 0.15, 0.15).into(),
+                border_color: BorderColor(Color::BLACK),
+                ..default()
+            },
+        ))
+        .with_children(|button| {
+            button.spawn((
+                MainMenuElement {},
+                TextBundle::from_section(
+                    "Start Game",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+            ));
+        });
 }

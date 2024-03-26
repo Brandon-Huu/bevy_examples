@@ -41,7 +41,11 @@ impl Plugin for SplashScreenPlugin {
             .add_systems(Update, timeout.run_if(in_state(GameState::SplashScreen)))
             //Runs if MainMenuAssets is inserted into app
             //Checks if loading is complete
-            .add_systems(FixedUpdate, transition_to_main_menu.run_if(resource_exists::<MainMenuAssets>));
+            .add_systems(FixedUpdate, 
+                         transition_to_main_menu
+                            .run_if(resource_exists::<MainMenuAssets>)
+                            .run_if(in_state(GameState::SplashScreen))
+                         );
     }
 }
 
